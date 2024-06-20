@@ -1,36 +1,29 @@
 #!/bin/bash
 
 # to fix
-# check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
-# imporve port parsing
-# remove awk dependency?
+
 
 VERSION=0.1
-DEFAULT_PORT=8080
+DEBUG=1
+PORT_BASE=8080
 SITES_ENABLED="/etc/nginx/sites-enabled/"
 SITES_AVAILABLE="/etc/nginx/sites-available/"
 
-read -d '\n' template_text << EndOfText
-server {
-    listen %i;
+TEMPLATE_HTML="server {
+    listen %s;
     root %s;
     location / {
         try_files \$uri \$uri/ =404;
     }
-}
-EndOfText
+}"
 
-read -d '\n' version_template << EndOfText
-ngrol version: $VERSION
+TEMPLATE_VERSION="nsm version: $VERSION
   -> nginx version:	%s
   -> systemd version:	%s
-  -> awk version:	%s
   -> sites-available:	%s
-  -> sites-enabled:	%s
-EndOfText
+  -> sites-enabled:	%s"
 
-read -d '\n' help_template << EndOfText
-nsm start [path=.] [port=%i]
+TEMPLATE_HELP="nsm start [path=.] [port=%i]
 	nsm start
 	nsm start .
 	nsm start 8082
@@ -42,15 +35,11 @@ nsm del [path]
 nsm ls
 nsm enable [path]
 nsm disable [path] 
-nsm version
-EndOfText
+nsm version"
 
 
-declare -a server_files
+declare -a server_files=()
 declare -i server_enabled_count=0
-declare -i server_available_count=0
-declare server_port=""
-declare server_root=""
 
 
 nsm_update_server_files() {
@@ -85,7 +74,6 @@ nsm_update_server_files() {
 		fi
 	fi
 
-	server_available_count=0
 	if [[ $available -eq 1 ]]; then
 		local t=$(ls -1 "${SITES_AVAILABLE}"nsm.* 2>/dev/null)
 		local status=$?
@@ -94,7 +82,6 @@ nsm_update_server_files() {
 				# for some reason we need to check this?
 				if [[ -f "$file" ]]; then
 					server_files+=("$file")
-					let "server_available_count+=1"
 				fi
 			done <<< "$t"
 		fi
@@ -103,7 +90,6 @@ nsm_update_server_files() {
 	# debug
 	# printf "%s\n" "${server_files[*]}"
 	# printf "enabled sites: %i\n" "${server_enabled_count}"
-	# printf "available sites: %s\n" "${server_available_count}"
 }
 
 
@@ -125,20 +111,15 @@ nsm_print_server_confs() {
 
 nsm_parse_port() {
 
-	# listen 8080;
-	# listen 192.168.1.1:8080;
-	# listen 192.168.1.1:8080;
-	# listen [2001:db8::1]:8080;
-	# listen 443 ssl;
-	# listen 80 default_server;
-	# listen [2001:db8::1];
-
 	local line=$1
-	port="${line##listen* }"
-	port="${port##:}"
+	port="${line##listen}"
+	port="${port##*]}"
+	port="${port##*:}"
 	port="${port%%;}"
-	port="${port%% default_server}"
-	port="${port%% ssl}"
+	port="${port#* }"
+	port="${port%* }"
+	port="${port/default_server/}"
+	port="${port/ssl/}"
 	printf "%s" "$port"
 }
 
@@ -184,55 +165,51 @@ nsm_get_root() {
 }
 
 
-nsm_get_details() {
-
-	local file=$1
-	server_port=""
-	server_root=""
-	while read line; do
-		if [[ "$line" =~ listen ]]; then
-			server_port=$(nsm_parse_port "$line")
-			continue
-		fi
-		if [[ "$line" =~ root ]]; then
-			server_root=$(nsm_parse_root "$line")
-			continue
-		fi
-		if [[ -n $server_port && -n $server_root ]]; then
-			break
-		fi
-	done < $file
-}
-
-
 nsm_ports_get_available() {
 
 	local ports=()
-	for file in "${SITES_ENABLED}"*; do
-		while read line; do
-			if [[ "$line" =~ listen ]]; then
-				port=$(nsm_parse_port "$line")
-				ports+=($port)
-				break
-			fi
-		done < $file
-		# printf "[%i] %-36s %-5s (%s)\n" "$i" "$file" "${port}" "enabled";
-	done
-	for file in "${SITES_AVAILABLE}"*; do
-		while read line; do
-			if [[ "$line" =~ listen ]]; then
-				port=$(nsm_parse_port "$line")
-				ports+=$port
-				break
-			fi
-		done < $file
-		# printf "[%i] %-36s %-5s (%s)\n" "$i" "$file" "${port}" "enabled";
-	done
 
-	port=$DEFAULT_PORT
+	local t=$(ls -1 "${SITES_ENABLED}"* 2>/dev/null)
+	local status=$?
+	if [[ $status -eq 0 ]]; then
+		while read file; do
+			# for some reason we need to check this?
+			if [[ -f "$file" ]]; then
+				while read line; do
+					if [[ "$line" =~ listen ]]; then
+						port=$(nsm_parse_port "$line")
+						ports+=($port)
+						break
+					fi
+				done < "$file"
+			fi
+		done <<< "$t"
+	fi
+	# [ $DEBUG -eq 1 ] && printf "Debug: ports used = %s\n" "${ports[*]}"
+
+	local t=$(ls -1 "${SITES_AVAILABLE}"* 2>/dev/null)
+	local status=$?
+	if [[ $status -eq 0 ]]; then
+		while read file; do
+			# for some reason we need to check this?
+			if [[ -f "$file" ]]; then
+				while read line; do
+					if [[ "$line" =~ listen ]]; then
+						port=$(nsm_parse_port "$line")
+						ports+=($port)
+						break
+					fi
+				done < "$file"
+			fi
+		done <<< "$t"
+	fi
+	# [ $DEBUG -eq 1 ] && printf "Debug: ports used = %s\n" "${ports[*]}"
+
+	port=$PORT_BASE
 	while [[ " ${ports[*]} " =~ " ${port} " ]]; do
 		let "port+=1"
 	done
+
 	echo $port
 }
 
@@ -280,22 +257,24 @@ nsm_start() {
 
 	if [ -z $port ] && ( [ -f $pa ] || [ -f $pe ] ); then
 		# existing file
+		[ $DEBUG -eq 1 ] && printf "%s\n" "Debug: Using existing file."
 		if [ -f $pa ]; then
 			mv "$pa" "$pe"
 		fi
-		fc=$(cat "$pe")
+		fc="$(<$pe)"
 		port=$( nsm_get_port "$fc")
 	else
 		# new file
+		[ $DEBUG -eq 1 ] && printf "%s\n" "Debug: Creating new file."
 		if [ -n $port ]; then
 			port=$(nsm_ports_get_available)
 		fi
-		printf "$template_text\n" $port "$path" > "$pe"
+		printf "$TEMPLATE_HTML\n" $port "$path" > "$pe"
 	fi
 
 	systemctl restart nginx.service
 	printf "\nsite enabled: %s\n" $path
-	printf " --> http://localhost:%i/\n" $port
+	printf " --> http://localhost:%s/\n" $port
 }
 
 
@@ -305,10 +284,13 @@ nsm_remove() {
 	nsm_print_server_confs
 	read -p "Enter site number to remove: " option
 	if [[ -f "${server_files[$option-1]}" ]]; then
+		fc="$(<${server_files[$option-1]})"
+		root=$(nsm_get_root "$fc")
 		sudo rm "${server_files[$option-1]}"
+		printf " -> %-36s (removed)\n" "${root}"
 	else 
 		printf "%s\n" "Error: Invalid option? Not a file?"
-	fi	
+	fi
 }
 
 
@@ -316,13 +298,19 @@ nsm_enable() {
 
 	nsm_update_server_files "available"
 	nsm_print_server_confs
+	if [[ "${#server_files[@]}" -eq 0 ]]; then
+		printf "%s\n" "Nothing to enable."
+		return
+	fi
 	read -p "Enter site number to enable: " option
 	file="${server_files[$option-1]##/*/}"
 	if [[ -f "${SITES_AVAILABLE}${file}" && -d "${SITES_ENABLED}" ]]; then
 		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}"
 		systemctl restart nginx.service
-		nsm_get_details "${SITES_ENABLED}${file}"
-		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${server_root}" "${server_port}"
+		fc="$(<${SITES_ENABLED}${file})"
+		port=$(nsm_get_port "$fc")
+		root=$(nsm_get_root "$fc")
+		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${root}" "${port}"
 	else 
 		printf "%s\n" "Error: Invalid option, source not a file or destination not a directory!"
 	fi
@@ -333,13 +321,19 @@ nsm_disable() {
 
 	nsm_update_server_files "enabled"
 	nsm_print_server_confs
+	if [[ "${#server_files[@]}" -eq 0 ]]; then
+		printf "%s\n" "Nothing to disable."
+		return
+	fi
 	read -p "Enter site number to disable: " option
 	file="${server_files[$option-1]##/*/}"
 	if [[ -f "${SITES_ENABLED}${file}" && -d "${SITES_AVAILABLE}" ]]; then
 		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}"
 		systemctl restart nginx.service
-		nsm_get_details "${SITES_AVAILABLE}${file}"
-		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${server_root}" "${server_port}"
+		fc="$(<${SITES_AVAILABLE}${file})"
+		port=$(nsm_get_port "$fc")
+		root=$(nsm_get_root "$fc")
+		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${root}" "${port}"
 	else 
 		printf "%s\n" "Error: Invalid option, source not a file or destination not a directory!"
 	fi	
@@ -368,9 +362,28 @@ nsm_status() {
 
 
 nsm_version() {
-	ngx_version=$(nginx -V 2>&1 | head --lines=1 | awk '{print $3}' | awk -F '/' '{print $2}')
-	smd_version=$(systemctl --version 2>&1 | head --lines=1 | awk '{print $2}')
-	awk_version=$(awk --version 2>&1 | head --lines=1 | awk '{print $2}')
+
+	local ngx_version=""
+	local t=$(nginx -V  2>&1)
+	while read line; do
+		if [[ "$line" =~ version: ]]; then
+			ngx_version="${line##*version:}"
+			ngx_version="${ngx_version## nginx/}"
+			ngx_version="${ngx_version%% (*}"
+			break
+		fi		
+	done <<< "$t"
+
+	local smd_version=""
+	local t=$(systemctl --version 2>&1)
+	while read line; do
+		if [[ "$line" =~ systemd ]]; then
+			smd_version="${line##*(}"
+			smd_version="${smd_version%%)*}"
+			break
+		fi		
+	done <<< "$t"
+
 	sites_enabled="not found"
 	sites_available="not found"
 	if [ -d $SITES_AVAILABLE ]; then
@@ -379,7 +392,7 @@ nsm_version() {
 	if [ -d $SITES_ENABLED ]; then
 		sites_enabled="found"
 	fi
-	printf "$version_template\n" $ngx_version $smd_version $awk_version $sites_available $sites_enabled
+	printf "$TEMPLATE_VERSION\n" $ngx_version $smd_version $sites_available $sites_enabled
 }
 
 
@@ -388,7 +401,7 @@ nsm_main() {
 	case "$1" in
 
 		"start" )
-			nsm_start ;;
+			nsm_start "$@" ;;
 
 		"remove" )
 			nsm_remove ;;
@@ -408,15 +421,14 @@ nsm_main() {
 		"version" )
 			nsm_version ;;
 
-		"help" )
-			printf '%s\n' "$help_template" ;;
+	"help" )
+			printf '%s\n' "$TEMPLATE_HELP" ;;
 
 		* )
 			echo "Try 'nsm.sh help' for more information." ;;
 
 	esac
-	exit 0
 }
 
 
-nsm_main $1
+nsm_main "$@"
