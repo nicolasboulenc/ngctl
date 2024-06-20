@@ -113,7 +113,7 @@ nsm_parse_port() {
 
 	local line=$1
 	port="${line##listen}"
-	port="${port##*]}"
+	port="${port##*']'}"
 	port="${port##*:}"
 	port="${port%%;}"
 	port="${port#* }"
