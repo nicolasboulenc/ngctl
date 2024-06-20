@@ -1,4 +1,3 @@
-# nsm
 # NGINX Site Manager 
 
 ## Table of Contents
