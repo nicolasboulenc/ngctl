@@ -42,7 +42,7 @@ declare -a server_files=()
 declare -i server_enabled_count=0
 
 
-nsm_update_server_files() {
+nsm_server_list_update() {
 
 	local option=$1
 	local enabled=0
@@ -93,7 +93,7 @@ nsm_update_server_files() {
 }
 
 
-nsm_print_server_confs() {
+nsm_server_list_print() {
 	i=1
 	d="enabled"
 	for file in "${server_files[@]}"; do
@@ -116,10 +116,10 @@ nsm_parse_port() {
 	port="${port##*']'}"
 	port="${port##*:}"
 	port="${port%%;}"
-	port="${port#* }"
-	port="${port%* }"
 	port="${port/default_server/}"
 	port="${port/ssl/}"
+	port="${port#* }"
+	port="${port%* }"
 	printf "%s" "$port"
 }
 
@@ -214,23 +214,25 @@ nsm_ports_get_available() {
 }
 
 
-nsm_start() {
+nsm_cmd_start() {
 
 	path=$(pwd)"/"
 	port=""
 
 	# check for 2nd argument
-	if ! [ -z "$2" ]; then
+	if ! [[ -z "$2" ]]; then
 		# check if argument is a number
 		if [[ "$2" =~ ^[0-9]+$ ]]; then
 			# this is a port number
 			port="$2"
+			[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Found port $port (arg 2)."
 		else
 			# this should be a path
-			if [ -d "$2" ]; then
+			if [[ -d "$2" ]]; then
 				pushd "$2" >/dev/null 2>&1
 				path=$(pwd)"/"
 				popd >/dev/null 2>&1
+				[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Found root $path."
 			else
 				printf "Error: path does not exist!"
 				exit 1
@@ -239,11 +241,12 @@ nsm_start() {
 	fi
 
 	# check for 3rd argument
-	if ! [ -z "$3" ]; then
+	if ! [[ -z "$3" ]]; then
 		# check if argument is a number
 		if [[ "$3" =~ ^[0-9]+$ ]]; then
 			# this is a port number
 			port="$3"
+			[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Found port $port (arg 3)."
 		else
 			printf "Error: port should be a number!"
 			exit 1
@@ -255,33 +258,39 @@ nsm_start() {
 	pe="$SITES_ENABLED$fn"
 	pa="$SITES_AVAILABLE$fn"
 
-	if [ -z $port ] && ( [ -f $pa ] || [ -f $pe ] ); then
+	if [[ -z "$port" && ( -f "$pa" || -f "$pe" ) ]]; then
 		# existing file
-		[ $DEBUG -eq 1 ] && printf "%s\n" "Debug: Using existing file."
-		if [ -f $pa ]; then
+		[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Using existing file."
+		if [[ -f "$pa" ]]; then
 			mv "$pa" "$pe"
 		fi
 		fc="$(<$pe)"
 		port=$( nsm_get_port "$fc")
 	else
 		# new file
-		[ $DEBUG -eq 1 ] && printf "%s\n" "Debug: Creating new file."
-		if [ -n $port ]; then
+		# in case the file already existed but we provided a new port
+		if [[ -f "$pe" ]]; then
+			rm "$pe"
+		fi
+
+		[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Creating new file."
+		if [[ -z "$port" ]]; then
 			port=$(nsm_ports_get_available)
+			[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Found available port $port."
 		fi
 		printf "$TEMPLATE_HTML\n" $port "$path" > "$pe"
 	fi
 
-	systemctl restart nginx.service
+	systemctl reload nginx.service
 	printf "\nsite enabled: %s\n" $path
 	printf " --> http://localhost:%s/\n" $port
 }
 
 
-nsm_remove() {
+nsm_cmd_remove() {
 
-	nsm_update_server_files "both"
-	nsm_print_server_confs
+	nsm_server_list_update "both"
+	nsm_server_list_print
 	read -p "Enter site number to remove: " option
 	if [[ -f "${server_files[$option-1]}" ]]; then
 		fc="$(<${server_files[$option-1]})"
@@ -294,10 +303,22 @@ nsm_remove() {
 }
 
 
-nsm_enable() {
+nsm_cmd_remove_all() {
 
-	nsm_update_server_files "available"
-	nsm_print_server_confs
+	nsm_server_list_update "both"
+
+	for file in "${server_files[@]}"; do
+		if [[ -f "$file" ]]; then
+			rm "$file"
+		fi
+	done
+}
+
+
+nsm_cmd_enable() {
+
+	nsm_server_list_update "available"
+	nsm_server_list_print
 	if [[ "${#server_files[@]}" -eq 0 ]]; then
 		printf "%s\n" "Nothing to enable."
 		return
@@ -317,10 +338,10 @@ nsm_enable() {
 }
 
 
-nsm_disable() {
+nsm_cmd_disable() {
 
-	nsm_update_server_files "enabled"
-	nsm_print_server_confs
+	nsm_server_list_update "enabled"
+	nsm_server_list_print
 	if [[ "${#server_files[@]}" -eq 0 ]]; then
 		printf "%s\n" "Nothing to disable."
 		return
@@ -340,13 +361,13 @@ nsm_disable() {
 }
 
 
-nsm_ls() {
-	nsm_update_server_files "both"
-	nsm_print_server_confs
+nsm_cmd_ls() {
+	nsm_server_list_update "both"
+	nsm_server_list_print
 }
 
 
-nsm_status() {
+nsm_cmd_status() {
 	# Assumes active is line 3
 	status=$(systemctl status nginx.service | 
 		while read line; do
@@ -361,7 +382,7 @@ nsm_status() {
 }
 
 
-nsm_version() {
+nsm_cmd_version() {
 
 	local ngx_version=""
 	local t=$(nginx -V  2>&1)
@@ -401,34 +422,36 @@ nsm_main() {
 	case "$1" in
 
 		"start" )
-			nsm_start "$@" ;;
+			nsm_cmd_start "$@" ;;
 
 		"remove" )
-			nsm_remove ;;
+			nsm_cmd_remove ;;
+
+		"remove-all" )
+			nsm_cmd_remove_all ;;
 
 		"enable" )
-			nsm_enable ;;
+			nsm_cmd_enable ;;
 
 		"disable" )
-			nsm_disable ;;
+			nsm_cmd_disable ;;
 
 		"ls" )
-			nsm_ls ;;
+			nsm_cmd_ls ;;
 
 		"status" )
-			nsm_status ;;
+			nsm_cmd_status ;;
 
 		"version" )
-			nsm_version ;;
+			nsm_cmd_version ;;
 
-	"help" )
+		"help" )
 			printf '%s\n' "$TEMPLATE_HELP" ;;
 
 		* )
 			echo "Try 'nsm.sh help' for more information." ;;
-
 	esac
 }
 
-
+# nsm_main "start" "8086"
 nsm_main "$@"
