@@ -30,12 +30,12 @@ TEMPLATE_HELP="nsm start [path=.] [port=%i]
 	nsm start /home/nicolas/dev
 	nsm start /home/nicolas/dev 8088
 	nsm start . 8083
-nsm add [path] [port]
-nsm del [path]
-nsm ls
+nsm remove [path]
 nsm enable [path]
 nsm disable [path] 
-nsm version"
+nsm ls
+nsm version
+nsm help"
 
 
 declare -a server_files=()
@@ -300,6 +300,7 @@ nsm_cmd_remove() {
 	else 
 		printf "%s\n" "Error: Invalid option? Not a file?"
 	fi
+	systemctl reload nginx.service
 }
 
 
@@ -327,7 +328,7 @@ nsm_cmd_enable() {
 	file="${server_files[$option-1]##/*/}"
 	if [[ -f "${SITES_AVAILABLE}${file}" && -d "${SITES_ENABLED}" ]]; then
 		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}"
-		systemctl restart nginx.service
+		systemctl reload nginx.service
 		fc="$(<${SITES_ENABLED}${file})"
 		port=$(nsm_get_port "$fc")
 		root=$(nsm_get_root "$fc")
@@ -350,7 +351,7 @@ nsm_cmd_disable() {
 	file="${server_files[$option-1]##/*/}"
 	if [[ -f "${SITES_ENABLED}${file}" && -d "${SITES_AVAILABLE}" ]]; then
 		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}"
-		systemctl restart nginx.service
+		systemctl reload nginx.service
 		fc="$(<${SITES_AVAILABLE}${file})"
 		port=$(nsm_get_port "$fc")
 		root=$(nsm_get_root "$fc")

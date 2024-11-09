@@ -63,6 +63,7 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     # test 2
     command="./nsm.sh start ."
@@ -75,6 +76,7 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     # test 3
     port="8083"
@@ -87,8 +89,10 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     ./nsm.sh remove-all
+    sleep 1
 
     # test 4
     port="8080"
@@ -99,6 +103,7 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     # test 5
     port="8082"
@@ -109,6 +114,7 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     # test 6
     port="8081"
@@ -119,8 +125,12 @@ test_start() {
     req=$(<./test.txt)
     res=$([[ $req =~ "ok" ]] && echo "success" || echo "failure")
     printf "cmd=%-58s port=%-15s %s\n" "$command" "$port" "$res"
+    sleep 1
 
     ./nsm.sh remove-all
+    sleep 1
+
+    printf "\n"
 }
 
 
