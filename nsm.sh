@@ -17,32 +17,32 @@ TEMPLATE_HTML="server {
     }
 }"
 
-TEMPLATE_VERSION="nsm version: $VERSION
+TEMPLATE_VERSION="xs version: $VERSION
   -> nginx version:	%s
   -> systemd version:	%s
   -> sites-available:	%s
   -> sites-enabled:	%s"
 
-TEMPLATE_HELP="nsm start [path=.] [port=%i]
-	nsm start
-	nsm start .
-	nsm start 8082
-	nsm start /home/nicolas/dev
-	nsm start /home/nicolas/dev 8088
-	nsm start . 8083
-nsm remove [path]
-nsm enable [path]
-nsm disable [path] 
-nsm ls
-nsm version
-nsm help"
+TEMPLATE_HELP="xs start [path=.] [port=%i]
+	xs start
+	xs start .
+	xs start 8082
+	xs start /home/nicolas/dev
+	xs start /home/nicolas/dev 8088
+	xs start . 8083
+xs remove [path]
+xs enable [path]
+xs disable [path] 
+xs ls
+xs version
+xs help"
 
 
 declare -a server_files=()
 declare -i server_enabled_count=0
 
 
-nsm_server_list_update() {
+xs_server_list_update() {
 
 	local option=$1
 	local enabled=0
@@ -61,7 +61,7 @@ nsm_server_list_update() {
 
 	server_enabled_count=0	
 	if [[ $enabled -eq 1 ]]; then
-		local t=$(ls -1 "${SITES_ENABLED}"nsm.* 2>/dev/null)
+		local t=$(ls -1 "${SITES_ENABLED}"xs.* 2>/dev/null)
 		local status=$?
 		if [[ $status -eq 0 ]]; then
 			while read file; do
@@ -75,7 +75,7 @@ nsm_server_list_update() {
 	fi
 
 	if [[ $available -eq 1 ]]; then
-		local t=$(ls -1 "${SITES_AVAILABLE}"nsm.* 2>/dev/null)
+		local t=$(ls -1 "${SITES_AVAILABLE}"xs.* 2>/dev/null)
 		local status=$?
 		if [[ $status -eq 0 ]]; then
 			while read file; do
@@ -93,13 +93,13 @@ nsm_server_list_update() {
 }
 
 
-nsm_server_list_print() {
+xs_server_list_print() {
 	i=1
 	d="enabled"
 	for file in "${server_files[@]}"; do
 		fc="$(<$file)"
-		port=$(nsm_get_port "$fc")
-		root=$(nsm_get_root "$fc")
+		port=$(xs_get_port "$fc")
+		root=$(xs_get_root "$fc")
 		if [[ $i -eq $server_enabled_count+1 ]]; then
 			d="available"
 		fi
@@ -109,7 +109,7 @@ nsm_server_list_print() {
 }
 
 
-nsm_parse_port() {
+xs_parse_port() {
 
 	local line=$1
 	port="${line##listen}"
@@ -124,7 +124,7 @@ nsm_parse_port() {
 }
 
 
-nsm_parse_root() {
+xs_parse_root() {
 
 	local line=$1
 	root="${line##root* }"
@@ -134,14 +134,14 @@ nsm_parse_root() {
 
 
 # get port from site config file
-nsm_get_port() {
+xs_get_port() {
 
 	local content="$1"
 	local port=""
 
 	while read line; do
 		if [[ "$line" =~ listen ]]; then
-			port=$(nsm_parse_port "$line")
+			port=$(xs_parse_port "$line")
 			printf "%s" "$port"
 			return
 		fi
@@ -150,14 +150,14 @@ nsm_get_port() {
 
 
 # get root from site config file
-nsm_get_root() {
+xs_get_root() {
 
 	local content="$1"
 	local root=""
 
 	while read line; do
 		if [[ "$line" =~ root ]]; then
-			root=$(nsm_parse_root "$line")
+			root=$(xs_parse_root "$line")
 			printf "%s" "$root"
 			return
 		fi
@@ -165,7 +165,7 @@ nsm_get_root() {
 }
 
 
-nsm_ports_get_available() {
+xs_ports_get_available() {
 
 	local ports=()
 
@@ -177,7 +177,7 @@ nsm_ports_get_available() {
 			if [[ -f "$file" ]]; then
 				while read line; do
 					if [[ "$line" =~ listen ]]; then
-						port=$(nsm_parse_port "$line")
+						port=$(xs_parse_port "$line")
 						ports+=($port)
 						break
 					fi
@@ -195,7 +195,7 @@ nsm_ports_get_available() {
 			if [[ -f "$file" ]]; then
 				while read line; do
 					if [[ "$line" =~ listen ]]; then
-						port=$(nsm_parse_port "$line")
+						port=$(xs_parse_port "$line")
 						ports+=($port)
 						break
 					fi
@@ -214,7 +214,7 @@ nsm_ports_get_available() {
 }
 
 
-nsm_cmd_start() {
+xs_cmd_start() {
 
 	path=$(pwd)"/"
 	port=""
@@ -253,7 +253,7 @@ nsm_cmd_start() {
 		fi
 	fi
 
-	fn="nsm${path////.}"
+	fn="xs${path////.}"
 	fn="${fn::-1}"
 	pe="$SITES_ENABLED$fn"
 	pa="$SITES_AVAILABLE$fn"
@@ -265,7 +265,7 @@ nsm_cmd_start() {
 			mv "$pa" "$pe"
 		fi
 		fc="$(<$pe)"
-		port=$( nsm_get_port "$fc")
+		port=$( xs_get_port "$fc")
 	else
 		# new file
 		# in case the file already existed but we provided a new port
@@ -275,7 +275,7 @@ nsm_cmd_start() {
 
 		[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Creating new file."
 		if [[ -z "$port" ]]; then
-			port=$(nsm_ports_get_available)
+			port=$(xs_ports_get_available)
 			[[ $DEBUG -eq 1 ]] && printf "%s\n" "Debug: Found available port $port."
 		fi
 		printf "$TEMPLATE_HTML\n" $port "$path" > "$pe"
@@ -287,14 +287,14 @@ nsm_cmd_start() {
 }
 
 
-nsm_cmd_remove() {
+xs_cmd_remove() {
 
-	nsm_server_list_update "both"
-	nsm_server_list_print
+	xs_server_list_update "both"
+	xs_server_list_print
 	read -p "Enter site number to remove: " option
 	if [[ -f "${server_files[$option-1]}" ]]; then
 		fc="$(<${server_files[$option-1]})"
-		root=$(nsm_get_root "$fc")
+		root=$(xs_get_root "$fc")
 		sudo rm "${server_files[$option-1]}"
 		printf " -> %-36s (removed)\n" "${root}"
 	else 
@@ -304,9 +304,9 @@ nsm_cmd_remove() {
 }
 
 
-nsm_cmd_remove_all() {
+xs_cmd_remove_all() {
 
-	nsm_server_list_update "both"
+	xs_server_list_update "both"
 
 	for file in "${server_files[@]}"; do
 		if [[ -f "$file" ]]; then
@@ -316,10 +316,10 @@ nsm_cmd_remove_all() {
 }
 
 
-nsm_cmd_enable() {
+xs_cmd_enable() {
 
-	nsm_server_list_update "available"
-	nsm_server_list_print
+	xs_server_list_update "available"
+	xs_server_list_print
 	if [[ "${#server_files[@]}" -eq 0 ]]; then
 		printf "%s\n" "Nothing to enable."
 		return
@@ -330,8 +330,8 @@ nsm_cmd_enable() {
 		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}"
 		systemctl reload nginx.service
 		fc="$(<${SITES_ENABLED}${file})"
-		port=$(nsm_get_port "$fc")
-		root=$(nsm_get_root "$fc")
+		port=$(xs_get_port "$fc")
+		root=$(xs_get_root "$fc")
 		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${root}" "${port}"
 	else 
 		printf "%s\n" "Error: Invalid option, source not a file or destination not a directory!"
@@ -339,10 +339,10 @@ nsm_cmd_enable() {
 }
 
 
-nsm_cmd_disable() {
+xs_cmd_disable() {
 
-	nsm_server_list_update "enabled"
-	nsm_server_list_print
+	xs_server_list_update "enabled"
+	xs_server_list_print
 	if [[ "${#server_files[@]}" -eq 0 ]]; then
 		printf "%s\n" "Nothing to disable."
 		return
@@ -353,8 +353,8 @@ nsm_cmd_disable() {
 		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}"
 		systemctl reload nginx.service
 		fc="$(<${SITES_AVAILABLE}${file})"
-		port=$(nsm_get_port "$fc")
-		root=$(nsm_get_root "$fc")
+		port=$(xs_get_port "$fc")
+		root=$(xs_get_root "$fc")
 		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${root}" "${port}"
 	else 
 		printf "%s\n" "Error: Invalid option, source not a file or destination not a directory!"
@@ -362,13 +362,13 @@ nsm_cmd_disable() {
 }
 
 
-nsm_cmd_ls() {
-	nsm_server_list_update "both"
-	nsm_server_list_print
+xs_cmd_ls() {
+	xs_server_list_update "both"
+	xs_server_list_print
 }
 
 
-nsm_cmd_status() {
+xs_cmd_status() {
 	# Assumes active is line 3
 	status=$(systemctl status nginx.service | 
 		while read line; do
@@ -383,7 +383,7 @@ nsm_cmd_status() {
 }
 
 
-nsm_cmd_version() {
+xs_cmd_version() {
 
 	local ngx_version=""
 	local t=$(nginx -V  2>&1)
@@ -418,41 +418,41 @@ nsm_cmd_version() {
 }
 
 
-nsm_main() {
+xs_main() {
 
 	case "$1" in
 
 		"start" )
-			nsm_cmd_start "$@" ;;
+			xs_cmd_start "$@" ;;
 
 		"remove" )
-			nsm_cmd_remove ;;
+			xs_cmd_remove ;;
 
 		"remove-all" )
-			nsm_cmd_remove_all ;;
+			xs_cmd_remove_all ;;
 
 		"enable" )
-			nsm_cmd_enable ;;
+			xs_cmd_enable ;;
 
 		"disable" )
-			nsm_cmd_disable ;;
+			xs_cmd_disable ;;
 
 		"ls" )
-			nsm_cmd_ls ;;
+			xs_cmd_ls ;;
 
 		"status" )
-			nsm_cmd_status ;;
+			xs_cmd_status ;;
 
 		"version" )
-			nsm_cmd_version ;;
+			xs_cmd_version ;;
 
 		"help" )
 			printf '%s\n' "$TEMPLATE_HELP" ;;
 
 		* )
-			echo "Try 'nsm.sh help' for more information." ;;
+			echo "Try 'xs.sh help' for more information." ;;
 	esac
 }
 
-# nsm_main "start" "8086"
-nsm_main "$@"
+# xs_main "start" "8086"
+xs_main "$@"
