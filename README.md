@@ -18,7 +18,7 @@ Run as root
 sudo ln -s /home/nicolas/dev/ngctl/ngctl.sh ngctl.sh
 ```
 
-Run as user
+Run as user (make sure user is part of www-data)
 ```sh
 sudo chown -R root:www-data /etc/nginx/sites-enabled/
 sudo chmod 755 /etc/nginx/sites-enabled/
