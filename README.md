@@ -21,9 +21,17 @@ sudo ln -s /home/nicolas/dev/ngctl/ngctl.sh ngctl.sh
 Run as user (make sure user is part of www-data)
 ```sh
 sudo chown -R root:www-data /etc/nginx/sites-enabled/
-sudo chmod 755 /etc/nginx/sites-enabled/
+sudo chmod 775 /etc/nginx/sites-enabled/
 sudo chmod 664 /etc/nginx/sites-enabled/*
+sudo chown root:www-data /var/log/nginx/
+sudo chmod 775 /var/log/nginx/
 ```
+
+In the /etc/nginx/nginx.conf file change 
+```pid /run/nginx.pid;```
+to
+```pid /var/log/nginx/nginx.pid;```
+
 Add this to your .bashrc file
 ```sh
 export NGCTL_INSTALL="$HOME/dev/ngctl"

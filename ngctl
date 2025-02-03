@@ -36,8 +36,8 @@ ngctl start [path=.] [port=%i]
 	ngctl start /home/nicolas/dev
 	ngctl start /home/nicolas/dev 8088
 	ngctl start . 8083
-ngctl add [path] [port]
-ngctl del [path]
+ngctl add [path] [port]		-> Not implemented
+ngctl del [path]			-> Not implemented
 ngctl ls
 ngctl enable [path]
 ngctl disable [path] 
@@ -47,45 +47,39 @@ EndOfText
 
 declare -a servers
 declare -i servers_idx=1
+declare -a ports
 declare server_port=""
 declare server_root=""
-declare -a ports
 
 
 ngctl_print_confs() {
+
 	local path=$1
 	local desc=$2
 	servers_idx=$3
 
-	t=$(ls -1 "${path}"ngctl.* 2>/dev/null)
-	status=$?
-	if [ ! $status -eq 0 ]; then
-		printf "Nothing to action.\n"
-		exit
-	fi
+	for file in "${path}"ngctl.*; do
 
-	# for file in "${path}"ngctl.*; do
-	while read file; do
 		local port=""
 		local root=""
-		while read line; do
+		cat $file | while read line; do
+
 			if [[ "$line" =~ listen ]]; then
 				port="${line##listen* }"
 				port="${port%%;}"
-				continue
 			fi
 			if [[ "$line" =~ root ]]; then
 				root="${line##root* }"
 				root="${root%%;}"
-				continue
 			fi
 			if [[ -n $port && -n $root ]]; then
+				printf "[%i] %-48s http://localhost:%-15s (%s)\n" "$servers_idx" "${root}" "${port}" "${desc}";
 				break
 			fi
-		done < $file
-		printf "[%i] %-48s http://localhost:%-15s (%s)\n" "$servers_idx" "${root}" "${port}" "${desc}";
-		let "servers_idx+=1"
-	done <<< $t
+		done
+		servers_idx=$((servers_idx+1))
+	done
+
 }
 
 
@@ -217,7 +211,7 @@ case "$1" in
 		fi
 
 		$(nginx -t)
-		$(systemctl restart nginx.service)
+		$(nginx -s reload)
 		printf "\nlocation enabled: %s\n" $location
 		printf " --> http://localhost:%i/\n" $port
 	;;
@@ -227,8 +221,9 @@ case "$1" in
 		ngctl_print_confs "${SITES_AVAILABLE}" "disabled" 1
 		read -p "Enter location number to enable: " option
 		file="${servers[$option-1]##/*/}"
-		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
-		systemctl restart nginx.service
+		# mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
+		printf "  %-36s -> %-36s\n" "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
+		nginx -s reload
 		ngctl_get_conf_details "${SITES_ENABLED}${file}"
 		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${server_root}" "${server_port}"
 	;;
@@ -238,8 +233,9 @@ case "$1" in
 		ngctl_print_confs "${SITES_ENABLED}" "enabled" 1
 		read -p "Enter location number to disable: " option
 		file="${servers[$option-1]##/*/}"
-		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
-		systemctl restart nginx.service
+		# mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
+		printf "  %-36s -> %-36s\n" "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
+		nginx -s reload
 		ngctl_get_conf_details "${SITES_AVAILABLE}${file}"
 		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${server_root}" "${server_port}"
 	;;
