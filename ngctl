@@ -60,6 +60,10 @@ ngctl_print_confs() {
 
 	for file in "${path}"ngctl.*; do
 
+		if [ ! -f $file ]; then
+  			echo "No more files..."
+			break
+		fi
 		local port=""
 		local root=""
 		cat $file | while read line; do
