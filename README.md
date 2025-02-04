@@ -2,9 +2,9 @@
 
 ## Table of Contents
 
-- [Intro](##Intro)
-- [Installation](##Installation)
-- [Usage](##Usage)
+- [Intro](#Intro)
+- [Installation](#Installation)
+- [Usage](#Usage)
 - [Todo](#Todo)
 - [License](#License)
 
