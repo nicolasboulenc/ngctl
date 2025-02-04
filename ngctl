@@ -1,9 +1,5 @@
 #!/bin/bash
 
-# to fix
-# check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
-# imporve port parsing
-
 VERSION=0.1
 DEFAULT_PORT=8080
 SITES_ENABLED="/etc/nginx/sites-enabled/"
@@ -96,7 +92,7 @@ ngctl_get_conf_details() {
 	server_root=""
 
 	if [ ! -f "${file}" ]; then
-		echo "Files not found..."
+		echo "File not found..."
 		return
 	fi
 	readarray -t lines < <(cat "${file}")
@@ -168,6 +164,25 @@ ngctl_find_port_available() {
 }
 
 
+nginx_version() {
+	return
+}
+
+
+nginx_safe_start() {
+	# check if nginx is running, by checking for nginx.pid file contents
+	# if not present run nginx
+	return 
+}
+
+
+nginx_conf_is_valid() {
+	# run nginx -t and parse
+	return 
+}
+
+
+
 case "$1" in
 
 	"start" | "add" )
@@ -205,34 +220,27 @@ case "$1" in
 			fi
 		fi
 
-		fn="ngctl${location////.}"
-		fn="${fn::-1}"
-		pe="$SITES_ENABLED$fn"
-		pa="$SITES_AVAILABLE$fn"
+		file="ngctl${location////.}"
+		file="${file::-1}"
+		pe="${SITES_ENABLED}${file}"
+		pa="${SITES_AVAILABLE}${file}"
 
-		if [ -z $port ] && ( [ -f $pa ] || [ -f $pe ] ); then
-			printf 'Existing entry...\n'
-			if [ -f $pa ]; then
-				mv "$pa" "$pe"
+		if [ -z $port ] && ( [ -f "${pa}" ] || [ -f "${pe}" ] ); then
+			if [ -f "${pa}" ]; then
+				mv "${pa}" "${pe}"
 			fi
-			# todo get port from file
-			while read line; do
-				is_listen=$(echo $line | awk '{print $1}')
-				if [[ "$is_listen" == *"listen"* ]]; then
-					port=$(echo $line | awk '{print $2}')
-				fi
-			done < "${pe}"
+			ngctl_get_conf_details "${pe}"
+			port="${server_port}"
 		else
 			if [ -n $port ]; then
 				port=$(ngctl_find_port_available)
 			fi
-			# printf 'New entry...\n'
 			printf "$template_text\n" $port "$location" > "$pe"
 		fi
 
-		$(nginx -t)
-		$(nginx -s reload)
-		printf "\nlocation enabled: %s\n" $location
+		nginx -t &>/dev/null
+		nginx -s reload &>/dev/null
+		printf "location enabled: %s\n" $location
 		printf " --> http://localhost:%i/\n" $port
 	;;
 
@@ -267,22 +275,13 @@ case "$1" in
 
 	"status" )
 		# Assumes active is line 3
-		status=$(sudo systemctl status nginx.service | 
-			while read line; do
-				if [[ "$line" =~ Active: ]]; then
-					status="${line##Active: }"
-					status="${status%%(*}"
-					printf "%s" "$status"
-					break
-				fi
-			done)
+		status="not implememented"
 		printf 'nginx.service is %s\n' $status 
 	;;
 
 
 	"version" )
 		ngx_version=$(nginx -V 2>&1 | head --lines=1 | awk '{print $3}' | awk -F '/' '{print $2}')
-		smd_version=$(systemctl --version 2>&1 | head --lines=1 | awk '{print $2}')
 		awk_version=$(awk --version 2>&1 | head --lines=1 | awk '{print $2}')
 		sites_enabled="not found"
 		sites_available="not found"

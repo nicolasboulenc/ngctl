@@ -8,14 +8,14 @@
 
 ## Intro
 
-`ngctl` allows you to quickly manage sites on NGINX via the command line.
+`ngctl` allows you to quickly manage NGINX servers via the command line.
 
 
 ## Installation 
 
 Run as root
 ```sh
-sudo ln -s /home/nicolas/dev/ngctl/ngctl.sh ngctl.sh
+sudo ln -s /home/nicolas/dev/ngctl/ngctl ngctl
 ```
 
 Run as user (make sure user is part of www-data)
@@ -42,7 +42,7 @@ export NGCTL_INSTALL="$HOME/dev/ngctl"
 export PATH="$NGCTL_INSTALL:$PATH"
 ```
 
-**Example:**
+## Usage 
 ```sh
 $ ngctl start
 location enabled: /home/nicolas/dev/ngctl/
@@ -50,10 +50,18 @@ location enabled: /home/nicolas/dev/ngctl/
 $ ngctl version
 v16.9.1
 ```
-
-sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
-
 Simple as that!
+
+## Todo
+# to fix
+# check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
+# implement nginx_safe_start
+# implement nginx_conf_is_valid
+# remove systemctl, awk and head dependencies
+# allow for ssl template
+# sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
+# allow for php template
+# implemet ngctl del
 
 ## License
 
