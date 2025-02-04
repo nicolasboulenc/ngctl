@@ -1,9 +1,12 @@
-# NGINX Site Manager 
+# ngctl 
 
 ## Table of Contents
 
-- [Intro](#intro)
-- [License](#license)
+- [Intro](##Intro)
+- [Installation](##Installation)
+- [Usage](##Usage)
+- [Todo](#Todo)
+- [License](#License)
 
 
 ## Intro
@@ -53,15 +56,14 @@ v16.9.1
 Simple as that!
 
 ## Todo
-# to fix
-# check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
-# implement nginx_safe_start
-# implement nginx_conf_is_valid
-# remove systemctl, awk and head dependencies
-# allow for ssl template
-# sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
-# allow for php template
-# implemet ngctl del
+- check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
+- implement nginx_safe_start
+- implement nginx_conf_is_valid
+- remove systemctl, awk and head dependencies
+- allow for ssl template
+    - sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
+- allow for php template
+- implemet ngctl del
 
 ## License
 
