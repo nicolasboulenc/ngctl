@@ -23,8 +23,12 @@ Run as user (make sure user is part of www-data)
 sudo chown -R root:www-data /etc/nginx/sites-enabled/
 sudo chmod 775 /etc/nginx/sites-enabled/
 sudo chmod 664 /etc/nginx/sites-enabled/*
-sudo chown root:www-data /var/log/nginx/
+sudo chown -R root:www-data /etc/nginx/sites-available/
+sudo chmod 775 /etc/nginx/sites-available/
+sudo chmod 664 /etc/nginx/sites-available/*
+sudo chown -R root:www-data /var/log/nginx/
 sudo chmod 775 /var/log/nginx/
+sudo chmod 664 /var/log/nginx/*
 ```
 
 In the /etc/nginx/nginx.conf file change 

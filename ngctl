@@ -29,23 +29,20 @@ ngrol version: $VERSION
 EndOfText
 
 read -d '\n' help_template << EndOfText
-ngctl start [path=.] [port=%i]
-	ngctl start
-	ngctl start .
-	ngctl start 8082
-	ngctl start /home/nicolas/dev
-	ngctl start /home/nicolas/dev 8088
-	ngctl start . 8083
-ngctl add [path] [port]		-> Not implemented
-ngctl del [path]			-> Not implemented
-ngctl ls
-ngctl enable [path]
-ngctl disable [path] 
-ngctl version
+Usage: ngctl [COMMAND] [PATH] [PORT]
+Easily manage nginx conf files
+
+  start [PATH=.] [PORT=%i]    Starts a server with path as root. If not port is provided, will use first available port from 8080.
+  add   [PATH=.] [PORT=%i]    Alias for start.
+  del   [PATH]                NOT IMPLEMENTED
+  ls                          List all servers, enabled and available.
+  enable                      Enable a previously disabled server.
+  disable                     Disable a previously enabled server.
+  version                     Display version information.
 EndOfText
 
 
-declare -a servers
+declare -a servers_files=()
 declare -i servers_idx=1
 declare -a ports
 declare server_port=""
@@ -57,23 +54,29 @@ ngctl_print_confs() {
 	local path=$1
 	local desc=$2
 	servers_idx=$3
+    servers_files=()
 
 	for file in "${path}"ngctl.*; do
-
-		if [ ! -f $file ]; then
-  			echo "No more files..."
+		if [ ! -f "${file}" ]; then
+			if [ ${servers_idx} = 1 ]; then
+  				echo "No files found..."
+			fi
 			break
 		fi
+
+        servers_files+=("${file}")
 		local port=""
 		local root=""
-		cat $file | while read line; do
+		local line=""
+		readarray -t lines < <(cat "${file}")
+		for line in "${lines[@]}"; do
 
-			if [[ "$line" =~ listen ]]; then
-				port="${line##listen* }"
+			if [[ "${line}" =~ listen ]]; then
+				port="${line##* listen* }"
 				port="${port%%;}"
 			fi
-			if [[ "$line" =~ root ]]; then
-				root="${line##root* }"
+			if [[ "${line}" =~ root ]]; then
+				root="${line##* root* }"
 				root="${root%%;}"
 			fi
 			if [[ -n $port && -n $root ]]; then
@@ -83,7 +86,6 @@ ngctl_print_confs() {
 		done
 		servers_idx=$((servers_idx+1))
 	done
-
 }
 
 
@@ -92,48 +94,62 @@ ngctl_get_conf_details() {
 	local file=$1
 	server_port=""
 	server_root=""
-	while read line; do
+
+	if [ ! -f "${file}" ]; then
+		echo "Files not found..."
+		return
+	fi
+	readarray -t lines < <(cat "${file}")
+	for line in "${lines[@]}"; do
+
+		# print "%s\n" "${line}"
 		if [[ "$line" =~ listen ]]; then
-			server_port="${line##listen* }"
+			server_port="${line##* listen* }"
 			server_port="${server_port%%;}"
 			continue
 		fi
 		if [[ "$line" =~ root ]]; then
-			server_root="${line##root* }"
+			server_root="${line##* root* }"
 			server_root="${server_root%%;}"
 			continue
 		fi
 		if [[ -n $server_port && -n $server_root ]]; then
 			break
 		fi
-	done < $file
+	done
 }
 
 
 ngctl_get_ports() {
 
-	i=1
+	local i=1
 	for file in "${SITES_ENABLED}"*; do
-		while read line; do
+		if [ ! -f "${file}" ]; then
+			break
+		fi
+		cat "${file}" | while read line; do
 			if [[ "$line" =~ listen ]]; then
 				port="${line##listen }"
 				port="${port%%;}"
 				ports[$i-1]=$port
 				break
 			fi
-		done < $file
+		done
 		# printf "[%i] %-36s %-5s (%s)\n" "$i" "$file" "${port}" "enabled";
 		let "i+=1"
 	done
 	for file in "${SITES_AVAILABLE}"*; do
-		while read line; do
+		if [ ! -f "${file}" ]; then
+			break
+		fi
+		cat "${file}" | while read line; do
 			if [[ "$line" =~ listen ]]; then
 				port="${line##listen }"
 				port="${port%%;}"
 				ports[$i-1]=$port
 				break
 			fi
-		done < $file
+		done
 		# printf "[%i] %-36s %-5s (%s)\n" "$i" "$file" "${port}" "enabled";
 		let "i+=1"
 	done
@@ -148,13 +164,13 @@ ngctl_find_port_available() {
 	while [[ " ${ports[*]} " =~ " ${port} " ]]; do
 		let "port+=1"
 	done
-	echo $port
+	return $port
 }
 
 
 case "$1" in
 
-	"start" )
+	"start" | "add" )
 		location=$(pwd)"/"
 		port=""
 
@@ -224,10 +240,9 @@ case "$1" in
 	"enable" )
 		ngctl_print_confs "${SITES_AVAILABLE}" "disabled" 1
 		read -p "Enter location number to enable: " option
-		file="${servers[$option-1]##/*/}"
-		# mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
-		printf "  %-36s -> %-36s\n" "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
-		nginx -s reload
+		file="${servers_files[$option-1]##/*/}"
+		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
+		nginx -s reload &>/dev/null
 		ngctl_get_conf_details "${SITES_ENABLED}${file}"
 		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${server_root}" "${server_port}"
 	;;
@@ -236,10 +251,9 @@ case "$1" in
 	"disable" )
 		ngctl_print_confs "${SITES_ENABLED}" "enabled" 1
 		read -p "Enter location number to disable: " option
-		file="${servers[$option-1]##/*/}"
-		# mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
-		printf "  %-36s -> %-36s\n" "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
-		nginx -s reload
+		file="${servers_files[$option-1]##/*/}"
+		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
+		nginx -s reload &>/dev/null
 		ngctl_get_conf_details "${SITES_AVAILABLE}${file}"
 		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${server_root}" "${server_port}"
 	;;
@@ -247,13 +261,13 @@ case "$1" in
 
 	"ls" )
 		ngctl_print_confs "${SITES_ENABLED}" "enabled" 1
-		ngctl_print_confs "${SITES_AVAILABLE}" "available" "$servers_idx"
+		ngctl_print_confs "${SITES_AVAILABLE}" "available" ${servers_idx}
 	;;
 
 
 	"status" )
 		# Assumes active is line 3
-		status=$(systemctl status nginx.service | 
+		status=$(sudo systemctl status nginx.service | 
 			while read line; do
 				if [[ "$line" =~ Active: ]]; then
 					status="${line##Active: }"
@@ -283,12 +297,12 @@ case "$1" in
 
 
 	"help" )
-		printf '%s\n' "$help_template"
+		printf '%s\n\n' "$help_template"
 	;;
 
 
 	* )
-		echo "Try 'ngctl.sh help' for more information." 
+		printf '%s\n\n' "$help_template"
 	;;
 
 esac
