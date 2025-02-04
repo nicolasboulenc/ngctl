@@ -45,7 +45,9 @@ export NGCTL_INSTALL="$HOME/dev/ngctl"
 export PATH="$NGCTL_INSTALL:$PATH"
 ```
 
-## Usage 
+
+## Usage
+
 ```sh
 $ ngctl start
 location enabled: /home/nicolas/dev/ngctl/
@@ -55,7 +57,9 @@ v16.9.1
 ```
 Simple as that!
 
+
 ## Todo
+
 - check for requirement (awk, nginx, /etc/nginx/sites-available, /etc/nginx/sites-enabled, systemctl)
 - implement nginx_safe_start
 - implement nginx_conf_is_valid
@@ -64,6 +68,7 @@ Simple as that!
     - sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
 - allow for php template
 - implemet ngctl del
+
 
 ## License
 
