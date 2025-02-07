@@ -21,7 +21,28 @@ Run as root
 sudo ln -s /home/nicolas/dev/ngctl/ngctl ngctl
 ```
 
-Run as user (make sure user is part of www-data)
+Run as user 
+
+Make sure user is part of www-data, we'll manage access through the www-data group
+```sh
+sudo usermod -a -G www-data nicolas
+```
+
+Allow ngctl to start and stop nginx
+In the /etc/nginx/nginx.conf file change 
+```pid /run/nginx.pid;```
+to
+```pid /var/log/nginx/nginx.pid;```
+
+Give access to relevant folder
+```sh
+sudo chown -R root:www-data /var/log/nginx/
+sudo chmod 775 /var/log/nginx/
+sudo chmod 664 /var/log/nginx/*
+```
+
+Allow ngctl to create, remove and enable/disable servers
+Give access to relevant folder
 ```sh
 sudo chown -R root:www-data /etc/nginx/sites-enabled/
 sudo chmod 775 /etc/nginx/sites-enabled/
@@ -29,15 +50,7 @@ sudo chmod 664 /etc/nginx/sites-enabled/*
 sudo chown -R root:www-data /etc/nginx/sites-available/
 sudo chmod 775 /etc/nginx/sites-available/
 sudo chmod 664 /etc/nginx/sites-available/*
-sudo chown -R root:www-data /var/log/nginx/
-sudo chmod 775 /var/log/nginx/
-sudo chmod 664 /var/log/nginx/*
 ```
-
-In the /etc/nginx/nginx.conf file change 
-```pid /run/nginx.pid;```
-to
-```pid /var/log/nginx/nginx.pid;```
 
 Add this to your .bashrc file
 ```sh
@@ -68,7 +81,7 @@ Simple as that!
     - sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./nginx-selfsigned.key -out ./nginx-selfsigned.crt
 - allow for php template
 - implemet ngctl del
-
+- try to add an include with different path in the nginx.conf file, so we dont have to manage access so much
 
 ## License
 
