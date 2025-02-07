@@ -1,9 +1,13 @@
 #!/bin/bash
 
+if [ -z $NGCTL_ENABLED ]; then
+	echo "Error: Unable to find NGCTL_ENABLED folder!"
+	echo "ngctl-env.sh might not be loaded by your .bashrc file!"
+	exit 1
+fi
+
 VERSION=0.1
 DEFAULT_PORT=8080
-SITES_ENABLED="/etc/nginx/sites-enabled/"
-SITES_AVAILABLE="/etc/nginx/sites-available/"
 
 read -d '\n' template_text << EndOfText
 server {
@@ -119,7 +123,7 @@ ngctl_get_conf_details() {
 ngctl_get_ports() {
 
 	local i=1
-	for file in "${SITES_ENABLED}"*; do
+	for file in "${NGCTL_ENABLED}"*; do
 		if [ ! -f "${file}" ]; then
 			break
 		fi
@@ -134,7 +138,7 @@ ngctl_get_ports() {
 		# printf "[%i] %-36s %-5s (%s)\n" "$i" "$file" "${port}" "enabled";
 		let "i+=1"
 	done
-	for file in "${SITES_AVAILABLE}"*; do
+	for file in "${NGCTL_AVAILABLE}"*; do
 		if [ ! -f "${file}" ]; then
 			break
 		fi
@@ -222,8 +226,8 @@ case "$1" in
 
 		file="ngctl${location////.}"
 		file="${file::-1}"
-		pe="${SITES_ENABLED}${file}"
-		pa="${SITES_AVAILABLE}${file}"
+		pe="${NGCTL_ENABLED}${file}"
+		pa="${NGCTL_AVAILABLE}${file}"
 
 		if [ -z $port ] && ( [ -f "${pa}" ] || [ -f "${pe}" ] ); then
 			if [ -f "${pa}" ]; then
@@ -246,30 +250,30 @@ case "$1" in
 
 
 	"enable" )
-		ngctl_print_confs "${SITES_AVAILABLE}" "disabled" 1
+		ngctl_print_confs "${NGCTL_AVAILABLE}" "disabled" 1
 		read -p "Enter location number to enable: " option
 		file="${servers_files[$option-1]##/*/}"
-		mv "${SITES_AVAILABLE}${file}" "${SITES_ENABLED}${file}"
+		mv "${NGCTL_AVAILABLE}${file}" "${NGCTL_ENABLED}${file}"
 		nginx -s reload &>/dev/null
-		ngctl_get_conf_details "${SITES_ENABLED}${file}"
+		ngctl_get_conf_details "${NGCTL_ENABLED}${file}"
 		printf " -> %-36s http://localhost:%-5s (enabled)\n" "${server_root}" "${server_port}"
 	;;
 
 
 	"disable" )
-		ngctl_print_confs "${SITES_ENABLED}" "enabled" 1
+		ngctl_print_confs "${NGCTL_ENABLED}" "enabled" 1
 		read -p "Enter location number to disable: " option
 		file="${servers_files[$option-1]##/*/}"
-		mv "${SITES_ENABLED}${file}" "${SITES_AVAILABLE}${file}"
+		mv "${NGCTL_ENABLED}${file}" "${NGCTL_AVAILABLE}${file}"
 		nginx -s reload &>/dev/null
-		ngctl_get_conf_details "${SITES_AVAILABLE}${file}"
+		ngctl_get_conf_details "${NGCTL_AVAILABLE}${file}"
 		printf " -> %-36s http://localhost:%-5s (disabled)\n" "${server_root}" "${server_port}"
 	;;
 
 
 	"ls" )
-		ngctl_print_confs "${SITES_ENABLED}" "enabled" 1
-		ngctl_print_confs "${SITES_AVAILABLE}" "available" ${servers_idx}
+		ngctl_print_confs "${NGCTL_ENABLED}" "enabled" 1
+		ngctl_print_confs "${NGCTL_AVAILABLE}" "available" ${servers_idx}
 	;;
 
 
@@ -288,7 +292,7 @@ case "$1" in
 		if [ -d $SITES_AVAILABLE ]; then
 			sites_available="found"
 		fi
-		if [ -d $SITES_ENABLED ]; then
+		if [ -d "${NGCTL_ENABLED}" ]; then
 			sites_enabled="found"
 		fi
 		printf "$version_template\n" $ngx_version $smd_version $awk_version $sites_available $sites_enabled

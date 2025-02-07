@@ -16,10 +16,22 @@
 
 ## Installation 
 
-Run as root
+### 1. User (Recommended)
+
+Add this to your .bashrc file
+```sh
+export NGCTL_INSTALL="$HOME/dev/ngctl"
+export PATH="$NGCTL_INSTALL:$PATH"
+```
+
+### 2. User (Not ideal)
+
+### 3. Root (Easiest)
 ```sh
 sudo ln -s /home/nicolas/dev/ngctl/ngctl ngctl
 ```
+
+
 
 Run as user 
 
