@@ -1,6 +1,14 @@
 #!/bin/bash
 
-source ./ngctl-env.sh
+# if NGCTL_INSTALL was not loaded with .bashrc / ngctl-env.sh, try to load it locally
+if [ -z $NGCTL_INSTALL ]; then
+    source ./ngctl-env.sh
+fi
+# if NGCTL_INSTALL still wasnt found exit
+if [ -z $NGCTL_INSTALL ]; then
+    echo "Error: unable to load ngctl-env.sh!"
+    exit 1
+fi
 
 # Create folders structure and copy files
 [ ! -d "$NGCTL_INSTALL" ] && mkdir "$NGCTL_INSTALL"

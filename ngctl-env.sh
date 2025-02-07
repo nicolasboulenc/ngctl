@@ -1,9 +1,9 @@
 #!/bin/bash
 
-NGCTL_INSTALL=~/.ngctl/
-NGCTL_ENABLED=~/.ngctl/sites-enabled/
-NGCTL_AVAILABLE=~/.ngctl/sites-available/
-NGCTL_LOG=~/.ngctl/log/
+export NGCTL_INSTALL=~/.ngctl/
+export NGCTL_ENABLED=~/.ngctl/sites-enabled/
+export NGCTL_AVAILABLE=~/.ngctl/sites-available/
+export NGCTL_LOG=~/.ngctl/log/
 
 case ":$PATH:" in
     *:"$NGCTL_INSTALL":*)

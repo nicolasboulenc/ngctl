@@ -1,6 +1,14 @@
 #!/bin/bash
 
-source ./ngctl-env.sh
+# if NGCTL_INSTALL was not loaded with .bashrc / ngctl-env.sh, try to load it locally
+if [ -z $NGCTL_INSTALL ]; then
+    source ./ngctl-env.sh
+fi
+# if NGCTL_INSTALL still wasnt found exit
+if [ -z $NGCTL_INSTALL ]; then
+    echo "Error: unable to find install folder, you need to run this script from its folder!"
+    exit 1
+fi
 
 # Recover .bashrc
 if [ -f ~/.bashrc.realbackup ]; then 
@@ -23,4 +31,3 @@ if [ -d $NGCTL_INSTALL ]; then
 else
     echo "Info: Install folder not found $NGCTL_INSTALL"
 fi
-

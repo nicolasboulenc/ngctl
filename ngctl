@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ -z $NGCTL_ENABLED ]; then
+if [ -z "$NGCTL_ENABLED" ]; then
 	echo "Error: Unable to find NGCTL_ENABLED folder!"
 	echo "ngctl-env.sh might not be loaded by your .bashrc file!"
 	exit 1
