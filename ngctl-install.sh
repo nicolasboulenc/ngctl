@@ -1,15 +1,13 @@
 #!/bin/bash
 
-# if NGCTL_INSTALL was not loaded with .bashrc / ngctl-env.sh, try to load it locally
-if [ -z $NGCTL_INSTALL ]; then
-    source ./ngctl-env.sh
+if [ -f ngctl-env.sh ]; then
+    source ngctl-env.sh
 fi
 # if NGCTL_INSTALL still wasnt found exit
 if [ -z $NGCTL_INSTALL ]; then
     echo "Error: unable to load ngctl-env.sh!"
     exit 1
 fi
-
 
 # Create folders structure and copy files
 if [ $NGCTL_DEV -eq 0 ]; then
@@ -53,20 +51,18 @@ sudo sed -i -e "s/user /#user /" /etc/nginx/nginx.conf
 sudo sed -i -e "s#pid .*#pid ${NGCTL_INSTALL}nginx.pid;#" /etc/nginx/nginx.conf
 # Include ngctl location for server files
 sudo sed -i -e "s#include /etc/nginx/sites-enabled/\*#include $NGCTL_ENABLED*#" /etc/nginx/nginx.conf
-
 # Change log files to install logs
 #   For some reason changing log files location seem impossible, maybe a default is builtin at compile time?
 #   Changing error_log in the nginx.conf file for another path doesnt seem to work
 #   Changing error_log in the nginx.conf file to /dev/null
 #   Using -c command line with a seperate conf file doesnt seem to work either
 #   Using -e command line might be an option although only availabe in version 1.19.x
-# sudo sed -i -e "s#access_log .*#access_log ${NGCTL_LOG}access.log;#" /etc/nginx/nginx.conf
-# sudo sed -i -e "s#error_log .*#error_log ${NGCTL_LOG}error.log;#" /etc/nginx/nginx.conf
+sudo sed -i -e "s#access_log .*#access_log ${NGCTL_LOG}access.log;#" /etc/nginx/nginx.conf
+sudo sed -i -e "s#error_log .*#error_log ${NGCTL_LOG}error.log;#" /etc/nginx/nginx.conf
 # sudo sed -i -e "s#error_log .*#error_log /dev/null;#" /etc/nginx/nginx.conf
-# Move the log files to install logs
 
 # This is an alternative whilst I find a way to resolve the error_log issue
-sudo chmod 666 /var/log/nginx/*
+# sudo chmod 666 /var/log/nginx/*
 
 # Check nginx config
 nginx -t

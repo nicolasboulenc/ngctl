@@ -1,7 +1,7 @@
 #!/bin/bash
 export NGCTL_DEV=1
 
-if [$NGCTL_DEV -eq 0]; then
+if [ $NGCTL_DEV -eq 0 ]; then
     export NGCTL_INSTALL=~/.ngctl/
 else
     export NGCTL_INSTALL=~/dev/ngctl/
