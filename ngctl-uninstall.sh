@@ -26,8 +26,12 @@ else
     echo "Info: Unable to recover /etc/nginx/nginx.conf.realbackup\n"
 fi
 
-if [ -d $NGCTL_INSTALL ]; then 
-    rm -R $NGCTL_INSTALL
-else
-    echo "Info: Install folder not found $NGCTL_INSTALL"
+if [ $NGCTL_DEV -eq 0 ]; then
+    if [ -d $NGCTL_INSTALL ]; then 
+        rm -R $NGCTL_INSTALL
+    else
+        echo "Info: Install folder not found $NGCTL_INSTALL"
+    fi
 fi
+
+echo "Info: Uninstall complete.\n"

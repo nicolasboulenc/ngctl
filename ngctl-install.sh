@@ -10,35 +10,33 @@ if [ -z $NGCTL_INSTALL ]; then
     exit 1
 fi
 
-# Create folders structure and copy files
-[ ! -d "$NGCTL_INSTALL" ] && mkdir "$NGCTL_INSTALL"
-[ ! -d "$NGCTL_ENABLED" ] && mkdir "$NGCTL_ENABLED"
-[ ! -d "$NGCTL_AVAILABLE" ] && mkdir "$NGCTL_AVAILABLE"
-[ ! -d "$NGCTL_LOG" ] && mkdir "$NGCTL_LOG"
 
-if [ ! -d "$NGCTL_INSTALL" ]; then
-    echo "Error: unable to create install folder!"
-    exit 1
+# Create folders structure and copy files
+if [ $NGCTL_DEV -eq 0 ]; then
+    [ ! -d "$NGCTL_INSTALL" ] && mkdir "$NGCTL_INSTALL"
+    [ ! -d "$NGCTL_ENABLED" ] && mkdir "$NGCTL_ENABLED"
+    [ ! -d "$NGCTL_AVAILABLE" ] && mkdir "$NGCTL_AVAILABLE"
+    [ ! -d "$NGCTL_LOG" ] && mkdir "$NGCTL_LOG"
+
+    if [ ! -d "$NGCTL_INSTALL" ]; then
+        echo "Error: unable to create install folder!"
+        exit 1
+    fi
+
+    cp -f ngctl "$NGCTL_INSTALL"
+    cp -f ngctl-env.sh "$NGCTL_INSTALL"
+    cp -f ngctl-install.sh "$NGCTL_INSTALL"
+    cp -f ngctl-uninstall.sh "$NGCTL_INSTALL"
+    cp -f LICENSE.md "$NGCTL_INSTALL"
 fi
 
-cp -f ngctl "$NGCTL_INSTALL"
-cp -f ngctl-env.sh "$NGCTL_INSTALL"
-cp -f ngctl-install.sh "$NGCTL_INSTALL"
-cp -f ngctl-uninstall.sh "$NGCTL_INSTALL"
-cp -f LICENSE.md "$NGCTL_INSTALL"
 
 # Update .bashrc
 cp -f ~/.bashrc ~/.bashrc.backup
-# sed -i "/.*NGCTL_.*/D" ~/.bashrc
 sed -i "/.*ngctl-env.*/D" ~/.bashrc
 
-# printf "export NGCTL_INSTALL=$NGCTL_INSTALL\n" >> ~/.bashrc
-# printf "export NGCTL_ENABLED=$NGCTL_ENABLED\n" >> ~/.bashrc
-# printf "export NGCTL_AVAILABLE=$NGCTL_AVAILABLE\n" >> ~/.bashrc
-# printf "export NGCTL_LOG=$NGCTL_LOG\n" >> ~/.bashrc
-# printf "export PATH=\"\$NGCTL_INSTALL:\$PATH\"\n" >> ~/.bashrc
-
 printf "[ -f \"${NGCTL_INSTALL}ngctl-env.sh\" ] && source \"${NGCTL_INSTALL}ngctl-env.sh\"\n"  >> ~/.bashrc
+
 
 # Update nginx.conf
 if [ -f /run/nginx.pid ]; then
@@ -47,6 +45,7 @@ fi
 if [ -f ${NGCTL_INSTALL}nginx.pid ]; then
     nginx -s stop
 fi
+# Create a backup file
 sudo cp -f /etc/nginx/nginx.conf /etc/nginx/nginx.conf.backup
 # Comment the user directive as nginx will be launched as the user
 sudo sed -i -e "s/user /#user /" /etc/nginx/nginx.conf
