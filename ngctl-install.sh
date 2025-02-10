@@ -26,6 +26,10 @@ if [ $NGCTL_DEV -eq 0 ]; then
     cp -f ngctl-install.sh "$NGCTL_INSTALL"
     cp -f ngctl-uninstall.sh "$NGCTL_INSTALL"
     cp -f LICENSE.md "$NGCTL_INSTALL"
+else 
+    [ ! -d "$NGCTL_ENABLED" ] && mkdir "$NGCTL_ENABLED"
+    [ ! -d "$NGCTL_AVAILABLE" ] && mkdir "$NGCTL_AVAILABLE"
+    [ ! -d "$NGCTL_LOG" ] && mkdir "$NGCTL_LOG"
 fi
 
 
