@@ -1,0 +1,7 @@
+server {
+	listen 8081;
+	root /home/nicolas/dev/webgl-2d/;
+	location / {
+		try_files $uri $uri/ =404;
+	}
+}
