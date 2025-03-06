@@ -1,6 +1,6 @@
 server {
     listen 8080;
-    root /home/nicolas/dev/pixel-ui/;
+    root    /home/nicolas/dev/pixel-ui/   ;
     location / {
         try_files $uri $uri/ =404;
     }

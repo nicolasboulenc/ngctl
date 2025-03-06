@@ -1,0 +1,4 @@
+config:
+   install: "/home/nicolas/dev/ngctl/"
+   enabled: "/home/nicolas/dev/ngctl/sites-enabled/"
+   available: "/home/nicolas/dev/ngctl/sites-available/"
