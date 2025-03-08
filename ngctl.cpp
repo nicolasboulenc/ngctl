@@ -22,11 +22,13 @@ const char *site_template =
     "}\n";
 
 
-const char *help_template = 
+const unsigned int PORT_DEFAULT = 8080;
+
+constexpr char *help_template = 
     "Usage: ngctl [COMMAND] [PATH] [PORT]\n"
     "Easily manage nginx conf files\n\n"
-    "  start [PATH=.] [PORT=%i]    Starts a server with path as root. If not port is provided, will use first available port from 8080.\n"
-    "  add   [PATH=.] [PORT=%i]    Alias for start.\n"
+    "  start [PATH=.] [PORT={}]    Starts a server with path as root. If not port is provided, will use first available port from 8080.\n"
+    "  add   [PATH=.] [PORT={}]    Alias for start.\n"
     "  del   [PATH]                NOT IMPLEMENTED\n"
     "  ls                          List all servers, enabled and available.\n"
     "  enable                      Enable a previously disabled server.\n"
@@ -122,9 +124,9 @@ int main(int argc, char** argv) {
     std::println("available-path:  |{}|", conf.available);
     std::println("conf ****************************************************** ");
 
-    site_t site;
-    get_site("/home/nicolas/dev/ngctl/sites-enabled/ngctl.home.nicolas.dev.pixel-ui", site);
-    std::println("site:  |{}|  |{}|", site.root, site.port);
+    // site_t site;
+    // get_site("/home/nicolas/dev/ngctl/sites-enabled/ngctl.home.nicolas.dev.pixel-ui", site);
+    // std::println("site:  |{}|  |{}|", site.root, site.port);
 
     if(argc > 1) {
 
@@ -137,21 +139,25 @@ int main(int argc, char** argv) {
         else if(strcmp(argv[1], "ls") == 0) {
 
             site_t site;
-            std::string desc = "enabled";
+            std::error_code ec;
             int i=0;
 
-            for(const auto& entry : std::filesystem::directory_iterator(conf.enabled)) {
-                get_site(entry.path(), site);
-                std::println("[{}] {} http://localhost:{} ({})", i, site.root, site.port, desc);
-                // std::cout << "[" << i << "] " << site.root.append(48 - site.root.length(), ' ') << " http://localhost:" << site.port << " (" << desc << ")" << std::endl;
-                i++;
+            std::string desc = "enabled";
+            if(std::filesystem::exists(conf.enabled, ec) == true) {
+                for(const auto& entry : std::filesystem::directory_iterator(conf.enabled)) {
+                    get_site(entry.path(), site);
+                    std::println("[{}] {:<32} http://localhost:{:<10} ({})", i, site.root, site.port, desc);
+                    i++;
+                }
             }
 
             desc = "available";
-            for(const auto& entry : std::filesystem::directory_iterator(conf.available)) {
-                get_site(entry.path(), site);
-                std::cout << "[" << i << "] " << site.root.append(48 - site.root.length(), ' ') << " http://localhost:" << site.port << " (" << desc << ")" << std::endl;
-                i++;
+            if(std::filesystem::exists(conf.available, ec) == true) {
+                for(const auto& entry : std::filesystem::directory_iterator(conf.available)) {
+                    get_site(entry.path(), site);
+                    std::println("[{}] {:<32} http://localhost:{:<10} ({})", i, site.root, site.port, desc);
+                    i++;
+                }
             }
         }
         else if(strcmp(argv[1], "enable") == 0) {
@@ -165,7 +171,7 @@ int main(int argc, char** argv) {
         }
     }
     else {
-        std::cout << help_template << "\n";
+        std::println(help_template, PORT_DEFAULT);
     }
 
     return 0;
