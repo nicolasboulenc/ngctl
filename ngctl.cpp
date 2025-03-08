@@ -1,13 +1,14 @@
 
 /*
+g++ 
 todo:
 - config file needs to include absolute paths
 */
 
-
 #include <iostream>
 #include <cstring>
 #include <fstream>
+#include <print>
 #include <filesystem>
 
 
@@ -114,24 +115,24 @@ int main(int argc, char** argv) {
 
     conf_t conf;
     get_conf(&conf);
-    std::cout << "conf ****************************************************** " << std::endl;
-    std::cout << "install-path:    " << conf.install << std::endl;
-    std::cout << "sites-enabled:   " << conf.enabled << std::endl;
-    std::cout << "sites-available: " << conf.available << std::endl;
-    std::cout << "conf ****************************************************** " << std::endl;
 
-    // site_t site;
-    // get_site("/home/nicolas/dev/ngctl/sites-enabled/ngctl.home.nicolas.dev.pixel-ui", site);
-    // std::cout << site.root << "||\n";
-    // std::cout << site.port << "||\n";
+    std::println("conf ****************************************************** ");
+    std::println("install-path:    |{}|", conf.install);
+    std::println("enabled-path:    |{}|", conf.enabled);
+    std::println("available-path:  |{}|", conf.available);
+    std::println("conf ****************************************************** ");
+
+    site_t site;
+    get_site("/home/nicolas/dev/ngctl/sites-enabled/ngctl.home.nicolas.dev.pixel-ui", site);
+    std::println("site:  |{}|  |{}|", site.root, site.port);
 
     if(argc > 1) {
 
         if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "add") == 0) {
-            printf("Start.\n");
+            std::println("start");
         }
         else if(strcmp(argv[1], "del") == 0) {
-            printf("del! This is a test prgoram.\n");
+            std::println("del");
         }
         else if(strcmp(argv[1], "ls") == 0) {
 
@@ -141,7 +142,8 @@ int main(int argc, char** argv) {
 
             for(const auto& entry : std::filesystem::directory_iterator(conf.enabled)) {
                 get_site(entry.path(), site);
-                std::cout << "[" << i << "] " << site.root.append(48 - site.root.length(), ' ') << " http://localhost:" << site.port << " (" << desc << ")" << std::endl;
+                std::println("[{}] {} http://localhost:{} ({})", i, site.root, site.port, desc);
+                // std::cout << "[" << i << "] " << site.root.append(48 - site.root.length(), ' ') << " http://localhost:" << site.port << " (" << desc << ")" << std::endl;
                 i++;
             }
 
@@ -153,13 +155,13 @@ int main(int argc, char** argv) {
             }
         }
         else if(strcmp(argv[1], "enable") == 0) {
-            printf("enable! This is a test prgoram.\n");
+            std::println("enable");
         }
         else if(strcmp(argv[1], "disable") == 0) {
-            printf("disable! This is a test prgoram.\n");
+            std::println("disable");
         }
         else if(strcmp(argv[1], "version") == 0) {
-            printf("version! This is a test prgoram.\n");
+            std::println("version");
         }
     }
     else {
