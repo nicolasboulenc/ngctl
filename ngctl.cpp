@@ -9,26 +9,17 @@ todo:
 #include <cstring>
 #include <fstream>
 #include <print>
+#include <vector>
 #include <filesystem>
-
-
-const char *site_template = 
-    "server {\n"
-    "  listen %i;\n"
-    "  root %s;\n"
-    "  location / {\n"
-    "    try_files $uri $uri/ =404;\n"
-    "  }\n"
-    "}\n";
 
 
 const unsigned int PORT_DEFAULT = 8080;
 
-constexpr char *help_template = 
+constexpr const char *help_template = 
     "Usage: ngctl [COMMAND] [PATH] [PORT]\n"
     "Easily manage nginx conf files\n\n"
-    "  start [PATH=.] [PORT={}]    Starts a server with path as root. If not port is provided, will use first available port from 8080.\n"
-    "  add   [PATH=.] [PORT={}]    Alias for start.\n"
+    "  start [PATH=.] [PORT={0}]    Starts a server with path as root. If not port is provided, will use first available port from 8080.\n"
+    "  add   [PATH=.] [PORT={0}]    Alias for start.\n"
     "  del   [PATH]                NOT IMPLEMENTED\n"
     "  ls                          List all servers, enabled and available.\n"
     "  enable                      Enable a previously disabled server.\n"
@@ -113,25 +104,140 @@ void get_site(std::string filename, site_t &site) {
 }
 
 
+void get_sites(const conf_t &conf, std::vector<site_t> &sites) {
+
+    try {
+        for (const auto &entry : std::filesystem::directory_iterator(conf.enabled)) {
+            site_t site;
+            get_site(entry.path().string(), site);
+            sites.push_back(site);
+        }
+    }
+    catch(std::filesystem::filesystem_error &er) {}
+
+    try {
+        for (const auto &entry : std::filesystem::directory_iterator(conf.available)) {
+            site_t site;
+            get_site(entry.path().string(), site);
+            sites.push_back(site);
+        }
+    }
+    catch(std::filesystem::filesystem_error &er) {}
+}
+
+
+int get_first_available_port(const conf_t &conf, const int &port_default=PORT_DEFAULT) {
+
+    std::vector<site_t> sites;
+    get_sites(conf, sites);
+
+    int port = port_default;
+    size_t sites_count = sites.size();
+
+    while(true) {
+        int i=0;
+        while(i < sites_count && sites[i].port != port) {
+            i++;
+        }
+        if(i == sites_count) {
+            break;
+        }
+        port++;
+    }
+    return port;
+}
+
+
 int main(int argc, char** argv) {
 
     conf_t conf;
     get_conf(&conf);
 
-    std::println("conf ****************************************************** ");
-    std::println("install-path:    |{}|", conf.install);
-    std::println("enabled-path:    |{}|", conf.enabled);
-    std::println("available-path:  |{}|", conf.available);
-    std::println("conf ****************************************************** ");
-
-    // site_t site;
-    // get_site("/home/nicolas/dev/ngctl/sites-enabled/ngctl.home.nicolas.dev.pixel-ui", site);
-    // std::println("site:  |{}|  |{}|", site.root, site.port);
-
     if(argc > 1) {
 
         if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "add") == 0) {
             std::println("start");
+
+			int port = -1;
+            std::string root = "";
+
+			// process args into root and port
+            for(int i=2; i<argc; i++) {
+
+                std::string arg = argv[i];
+
+                try {
+                    std::size_t pos;
+                    port = std::stoi(arg, &pos, 10);
+                }
+                catch (std::invalid_argument const& ex) {
+                    // std::cout << "std::invalid_argument::what(): " << ex.what() << '\n';
+                }
+
+                if(port == -1) {
+                    // this must be a path
+                    if(std::filesystem::exists(arg) == true) {
+                        root = arg;
+                    }
+                    else {
+                        std::println("Error: root does not exist!");
+                    }
+                }
+            }
+
+            if(root.compare("") == 0) {
+                root = std::filesystem::current_path();
+            }
+
+            std::string filename = root;
+            while(true) {
+                std::string::size_type pos = filename.find_first_of("/");
+                if(pos == std::string::npos) break;
+                filename.replace(pos, 1, ".");
+            }
+
+            
+            std::string en = conf.enabled;
+            std::string av = conf.available;
+            en.append(filename);
+            av.append(filename);
+
+            if(port == -1 && (std::filesystem::exists(en) || std::filesystem::exists(av))) {
+                if(std::filesystem::exists(en)) {
+                    // move file from available to enabled
+                    std::filesystem::rename(av, en);
+                }
+            }
+            else {
+                if(port == -1) {
+                    port = get_first_available_port(conf);
+                }
+
+                std::string tp = conf.install;
+                tp.append("template.conf");
+                std::cout << tp << std::endl;
+
+                std::ifstream is(tp);
+                auto size = std::filesystem::file_size(tp);
+                char str[1024000] = { 0 };
+                // std::string str(size, '\0');
+                is.seekg(0);
+                is.read(str, size);
+
+                // write to file
+                std::ofstream os(en, std::ios::binary);
+                os << std::format(str, root, port);
+                // std::println(ostrm, str, root, port);
+            }
+
+            std::cout << "port: " << port << std::endl;
+            std::cout << "root: " << root << std::endl;
+            std::cout << "output: " << en << std::endl;
+
+			// nginx -t &>/dev/null
+			// nginx -s reload &>/dev/null
+			// printf "location enabled: %s\n" $location
+			// printf " --> http://localhost:%i/\n" $port
         }
         else if(strcmp(argv[1], "del") == 0) {
             std::println("del");
