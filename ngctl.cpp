@@ -1,6 +1,5 @@
 
 /*
-g++ 
 todo:
 - config file needs to include absolute paths
 */
@@ -14,6 +13,17 @@ todo:
 
 
 const unsigned int PORT_DEFAULT = 8080;
+
+
+constexpr const char *site_template = 
+    "server {{\n"
+    "	listen {};\n"
+    "	root {};\n"
+    "	location / {{\n"
+    "		try_files $uri $uri/ =404;\n"
+    "	}}\n"
+    "}}";
+
 
 constexpr const char *help_template = 
     "Usage: ngctl [COMMAND] [PATH] [PORT]\n"
@@ -156,7 +166,6 @@ int main(int argc, char** argv) {
     if(argc > 1) {
 
         if(strcmp(argv[1], "start") == 0 || strcmp(argv[1], "add") == 0) {
-            std::println("start");
 
 			int port = -1;
             std::string root = "";
@@ -170,9 +179,7 @@ int main(int argc, char** argv) {
                     std::size_t pos;
                     port = std::stoi(arg, &pos, 10);
                 }
-                catch (std::invalid_argument const& ex) {
-                    // std::cout << "std::invalid_argument::what(): " << ex.what() << '\n';
-                }
+                catch (std::invalid_argument const& ex) { }
 
                 if(port == -1) {
                     // this must be a path
@@ -189,14 +196,14 @@ int main(int argc, char** argv) {
                 root = std::filesystem::current_path();
             }
 
-            std::string filename = root;
+            std::string filename = "ngctl";
+            filename.append(root);
             while(true) {
                 std::string::size_type pos = filename.find_first_of("/");
                 if(pos == std::string::npos) break;
                 filename.replace(pos, 1, ".");
             }
 
-            
             std::string en = conf.enabled;
             std::string av = conf.available;
             en.append(filename);
@@ -213,31 +220,16 @@ int main(int argc, char** argv) {
                     port = get_first_available_port(conf);
                 }
 
-                std::string tp = conf.install;
-                tp.append("template.conf");
-                std::cout << tp << std::endl;
-
-                std::ifstream is(tp);
-                auto size = std::filesystem::file_size(tp);
-                char str[1024000] = { 0 };
-                // std::string str(size, '\0');
-                is.seekg(0);
-                is.read(str, size);
-
                 // write to file
                 std::ofstream os(en, std::ios::binary);
-                os << std::format(str, root, port);
-                // std::println(ostrm, str, root, port);
+                std::println(os, site_template, port, root);
             }
-
-            std::cout << "port: " << port << std::endl;
-            std::cout << "root: " << root << std::endl;
-            std::cout << "output: " << en << std::endl;
-
+            std::system("nginx -t");
+            std::system("nginx -s reload");
 			// nginx -t &>/dev/null
 			// nginx -s reload &>/dev/null
-			// printf "location enabled: %s\n" $location
-			// printf " --> http://localhost:%i/\n" $port
+			std::println("location enabled: {}", root);
+			std::println(" --> http://localhost:{}/", port);
         }
         else if(strcmp(argv[1], "del") == 0) {
             std::println("del");
